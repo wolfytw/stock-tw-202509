@@ -6,12 +6,25 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 
-def _compute_flip_signals(close: pd.Series, lookback: int):
+def _compute_flip_signals(close: pd.Series, lookback: int, mode: str = 'meanrev'):
+    """計算翻轉信號索引。
+
+    mode = 'meanrev' (預設):
+        Buy  = 正(>0) -> 負(<0)  (期待拉回後反彈)
+        Sell = 負(<0) -> 正(>0)
+    若未來需要趨勢版本，可傳 mode='trend'：
+        Buy  = 負 -> 正
+        Sell = 正 -> 負
+    """
     mom_raw = close.pct_change(lookback)
     sign = mom_raw.apply(lambda v: 1 if v > 0 else (-1 if v < 0 else 0))
     prev = sign.shift(1)
-    buy_idx = sign[(sign == 1) & (prev == -1)].index
-    sell_idx = sign[(sign == -1) & (prev == 1)].index
+    if mode == 'trend':
+        buy_idx = sign[(sign == 1) & (prev == -1)].index
+        sell_idx = sign[(sign == -1) & (prev == 1)].index
+    else:  # meanrev
+        buy_idx = sign[(sign == -1) & (prev == 1)].index
+        sell_idx = sign[(sign == 1) & (prev == -1)].index
     return mom_raw, buy_idx, sell_idx
 
 
@@ -30,10 +43,10 @@ def build_data_report(
     # 計算（若未外部提供）
     mom_raw = None
     if buy_idx is None or sell_idx is None:
-        mom_raw, buy_idx, sell_idx = _compute_flip_signals(df['close'], lookback)
+        mom_raw, buy_idx, sell_idx = _compute_flip_signals(df['close'], lookback, mode='meanrev')
     else:
         # 仍需 mom_raw 以畫曲線
-        mom_raw, _, _ = _compute_flip_signals(df['close'], lookback)
+        mom_raw, _, _ = _compute_flip_signals(df['close'], lookback, mode='meanrev')
 
     fig = make_subplots(
         rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.03,
@@ -75,7 +88,7 @@ def build_data_report(
         fig.add_trace(go.Scatter(x=indicators['meanrev_sig'].index, y=indicators['meanrev_sig'], name=f'MeanRevSig({lookback})', line=dict(color='green', dash='dot')), row=3, col=1, secondary_y=True)
 
     fig.update_layout(
-        title=f"Data Report - {symbol} (Lkb={lookback} Buy={len(buy_idx)} / Sell={len(sell_idx)})",
+        title=f"Data Report - {symbol} [MeanReversion] (Lkb={lookback} Buy={len(buy_idx)} / Sell={len(sell_idx)})",
         template='plotly_white', legend=dict(orientation='h', yanchor='bottom', y=1.02, x=0)
     )
     fig.update_yaxes(title_text='Price', row=1, col=1)

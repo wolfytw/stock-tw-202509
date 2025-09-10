@@ -168,8 +168,9 @@ async def api_data_report(req: DataReportRequest):
     mom_raw = df['close'].pct_change(lb)
     sign = mom_raw.apply(lambda v: 1 if v>0 else (-1 if v<0 else 0))
     prev = sign.shift(1)
-    buys = sign[(sign==1) & (prev==-1)].index
-    sells = sign[(sign==-1) & (prev==1)].index
+    # Mean Reversion: 負<-正 (轉為 -1) 視為買點；正<-負 (轉為 +1) 視為賣點
+    buys = sign[(sign==-1) & (prev==1)].index
+    sells = sign[(sign==1) & (prev==-1)].index
     trades = []
     for ts in buys:
         trades.append({'type':'BUY','date': ts.strftime('%Y-%m-%d'), 'price': float(df.loc[ts,'close'])})
