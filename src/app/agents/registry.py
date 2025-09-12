@@ -1,4 +1,4 @@
-from azure.identity import DefaultAzureCredential
+from azure.core.credentials import AzureKeyCredential
 from ..config.settings import settings
 try:  # 動態相容 azure-ai-agents 版本差異
     from azure.ai.agents import AgentsClient, FunctionTool
@@ -18,11 +18,13 @@ try:
 except Exception:  # 避免迴圈或其他錯誤
     user_functions = []
 
+
 def get_client() -> AgentsClient:
     if not _AGENT_LIB_OK:
         raise RuntimeError("azure-ai-agents 套件不可用或版本不符，請確認 requirements 與安裝。")
     assert settings.project_endpoint, "環境變數 PROJECT_ENDPOINT 未設定"
-    return AgentsClient(endpoint=settings.project_endpoint, credential=DefaultAzureCredential())
+    assert settings.api_key, "環境變數 AZURE_API_KEY 未設定"
+    return AgentsClient(endpoint=settings.project_endpoint, credential=AzureKeyCredential(settings.api_key))
 
 def ensure_agents() -> dict:
     """建立或回收三個樣板代理並回傳 {'name': agent_object}。"""

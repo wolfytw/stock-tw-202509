@@ -6,6 +6,7 @@ load_dotenv()
 @dataclass
 class Settings:
     project_endpoint: str = os.getenv("PROJECT_ENDPOINT", "")
+    api_key: str = os.getenv("AZURE_API_KEY", "")
     model_deployment: str = os.getenv("MODEL_DEPLOYMENT_NAME", "")
     tx_fee_bps: float = float(os.getenv("TX_FEE_BPS", 2.8))
     tx_tax_bps: float = float(os.getenv("TX_TAX_BPS", 30.0))
